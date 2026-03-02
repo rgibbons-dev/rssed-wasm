@@ -2,7 +2,13 @@
 set -e
 
 echo "Building rssed-wasm..."
-wasm-pack build --target web --out-dir pkg --release
+
+# 1. Compile Rust to WASM
+cargo build --target wasm32-unknown-unknown --release
+
+# 2. Generate JS bindings
+wasm-bindgen --target web --out-dir pkg \
+  target/wasm32-unknown-unknown/release/rssed_wasm.wasm
 
 echo ""
 echo "Build complete. To serve locally:"

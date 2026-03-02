@@ -2,13 +2,28 @@
 
 A browser-based terminal interface for [rssed](https://github.com/rgibbons-dev/rssed), an ed(1)-style RSS/Atom feed reader. Compiled from Rust to WebAssembly.
 
-## Building
+## Prerequisites
 
-Requires [Rust](https://rustup.rs/) and [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/):
+- [Rust](https://rustup.rs/) (with the `wasm32-unknown-unknown` target)
+- [wasm-bindgen-cli](https://crates.io/crates/wasm-bindgen-cli)
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli
+```
+
+## Building
 
 ```sh
 ./build.sh
 ```
+
+This runs two steps:
+
+1. `cargo build --target wasm32-unknown-unknown --release` — compiles the Rust library to a `.wasm` binary
+2. `wasm-bindgen --target web --out-dir pkg ...` — generates the JS glue code and typed wrapper that the browser loads
+
+Output lands in `pkg/`.
 
 ## Running locally
 
