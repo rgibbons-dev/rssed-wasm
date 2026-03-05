@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 use feed_rs::parser;
 use feed_rs::model::{Entry, Feed};
 use html2text::from_read;
-use js_sys::Promise;
 use serde::{Deserialize, Serialize};
 use web_sys::window;
 
@@ -196,37 +195,33 @@ impl Rssed {
         }
     }
 
-    /// Process a single line of input, returns a Promise<String> with the output.
-    pub fn exec(&mut self, input: &str) -> Promise {
+    /// Process a single line of input. Returns the output string.
+    pub async fn exec(&mut self, input: &str) -> String {
         let input = input.trim().to_string();
 
-        // We need to handle async commands differently
-        // For sync commands, return resolved promise immediately
-        // For async commands (a, e, g), return a proper future
-
         if input.is_empty() {
-            return resolve_str("");
+            return String::new();
         }
 
         // + / -
         if input == "+" {
             if self.store.is_empty() || self.store[self.cur].feed.entries.is_empty() {
-                return resolve_str("?");
+                return "?".to_string();
             }
             let max = self.store[self.cur].feed.entries.len() - 1;
             if self.item < max {
                 self.item += 1;
             }
-            return resolve_str(&format_entry(&self.store[self.cur].feed.entries[self.item]));
+            return format_entry(&self.store[self.cur].feed.entries[self.item]);
         }
         if input == "-" {
             if self.store.is_empty() || self.store[self.cur].feed.entries.is_empty() {
-                return resolve_str("?");
+                return "?".to_string();
             }
             if self.item > 0 {
                 self.item -= 1;
             }
-            return resolve_str(&format_entry(&self.store[self.cur].feed.entries[self.item]));
+            return format_entry(&self.store[self.cur].feed.entries[self.item]);
         }
 
         let (tok, arg) = match input.find(' ') {
@@ -239,93 +234,70 @@ impl Rssed {
             "a" => {
                 let url = match arg {
                     Some(u) => u,
-                    None => return resolve_str("?"),
+                    None => return "?".to_string(),
                 };
-                // We need a raw pointer approach to mutate self from an async block.
-                // Instead, we'll use a different pattern: return the data and apply it.
-                let ptr = self as *mut Rssed;
-                return wasm_bindgen_futures::future_to_promise(async move {
-                    match fetch_feed(&url).await {
-                        Ok(feed) => {
-                            let n = feed.entries.len();
-                            let rssed = unsafe { &mut *ptr };
-                            rssed.store.push(StoredFeed {
-                                url: url.to_string(),
-                                feed,
-                            });
-                            rssed.cur = rssed.store.len() - 1;
-                            rssed.item = 0;
-                            rssed.dirty = true;
-                            Ok(JsValue::from_str(&n.to_string()))
-                        }
-                        Err(_) => Ok(JsValue::from_str("?")),
+                match fetch_feed(&url).await {
+                    Ok(feed) => {
+                        let n = feed.entries.len();
+                        self.store.push(StoredFeed {
+                            url: url.to_string(),
+                            feed,
+                        });
+                        self.cur = self.store.len() - 1;
+                        self.item = 0;
+                        self.dirty = true;
+                        return n.to_string();
                     }
-                });
+                    Err(_) => return "?".to_string(),
+                }
             }
             "g" => {
                 if self.store.is_empty() {
-                    return resolve_str("?");
+                    return "?".to_string();
                 }
-                let ptr = self as *mut Rssed;
-                return wasm_bindgen_futures::future_to_promise(async move {
-                    let rssed = unsafe { &mut *ptr };
-                    let mut err = false;
-                    for i in 0..rssed.store.len() {
-                        let url = rssed.store[i].url.clone();
-                        match fetch_feed(&url).await {
-                            Ok(feed) => rssed.store[i].feed = feed,
-                            Err(_) => {
-                                err = true;
-                                break;
-                            }
-                        }
+                for i in 0..self.store.len() {
+                    let url = self.store[i].url.clone();
+                    match fetch_feed(&url).await {
+                        Ok(feed) => self.store[i].feed = feed,
+                        Err(_) => return "?".to_string(),
                     }
-                    if err {
-                        Ok(JsValue::from_str("?"))
-                    } else {
-                        Ok(JsValue::from_str(""))
-                    }
-                });
+                }
+                return String::new();
             }
             "e" => {
                 let urls = match load_session_urls() {
                     Ok(u) => u,
-                    Err(_) => return resolve_str("?"),
+                    Err(_) => return "?".to_string(),
                 };
-                let ptr = self as *mut Rssed;
-                return wasm_bindgen_futures::future_to_promise(async move {
-                    let rssed = unsafe { &mut *ptr };
-                    rssed.store.clear();
-                    let mut total = 0usize;
-                    let mut output = String::new();
-                    for url in &urls {
-                        match fetch_feed(url).await {
-                            Ok(feed) => {
-                                total += feed.entries.len();
-                                rssed.store.push(StoredFeed {
-                                    url: url.to_string(),
-                                    feed,
-                                });
-                            }
-                            Err(_) => {
-                                output.push_str("?\n");
-                            }
+                self.store.clear();
+                let mut total = 0usize;
+                let mut output = String::new();
+                for url in &urls {
+                    match fetch_feed(url).await {
+                        Ok(feed) => {
+                            total += feed.entries.len();
+                            self.store.push(StoredFeed {
+                                url: url.to_string(),
+                                feed,
+                            });
+                        }
+                        Err(_) => {
+                            output.push_str("?\n");
                         }
                     }
-                    rssed.cur = 0;
-                    rssed.item = 0;
-                    rssed.dirty = false;
-                    rssed.quit_warned = false;
-                    output.push_str(&total.to_string());
-                    Ok(JsValue::from_str(&output))
-                });
+                }
+                self.cur = 0;
+                self.item = 0;
+                self.dirty = false;
+                self.quit_warned = false;
+                output.push_str(&total.to_string());
+                return output;
             }
             _ => {}
         }
 
         // --- Sync commands ---
-        let result = self.exec_sync(&tok, arg.as_deref());
-        resolve_str(&result)
+        self.exec_sync(&tok, arg.as_deref())
     }
 }
 
@@ -499,9 +471,4 @@ impl Rssed {
             }
         }
     }
-}
-
-fn resolve_str(s: &str) -> Promise {
-    let val = JsValue::from_str(s);
-    Promise::resolve(&val)
 }
