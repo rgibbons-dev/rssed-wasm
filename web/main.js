@@ -1,4 +1,4 @@
-import init, { Rssed } from "../pkg/rssed_wasm.js";
+import init, { Rssed } from "./pkg/rssed_wasm.js";
 
 let rssed = null;
 const output = document.getElementById("output");
@@ -32,8 +32,13 @@ function appendInput(text) {
 }
 
 // --- CORS proxy ---
-// Many RSS feeds don't set CORS headers. We use a public CORS proxy
-// so the WASM fetch can succeed from the browser.
+// Most RSS feeds don't set CORS headers, so browser fetch() fails.
+// This proxies requests through a third-party service. Caveats:
+//   - It's a free service: may go down, rate-limit, or disappear
+//   - All fetched URLs are visible to the proxy operator
+//   - Not suitable for private/authenticated feeds
+// To self-host, run your own CORS proxy (e.g. cors-anywhere) and
+// change CORS_PROXY below. Set to "" to disable proxying entirely.
 const CORS_PROXY = "https://corsproxy.io/?url=";
 
 function proxyUrl(cmd) {
