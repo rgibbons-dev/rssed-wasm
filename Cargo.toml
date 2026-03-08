@@ -1,0 +1,24 @@
+[package]
+name = "rssed-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["Window", "Storage"] }
+feed-rs = "2"
+html2text = "0.12.5"
+gloo-net = { version = "0.6", features = ["http"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+getrandom = { version = "0.2", features = ["js"] }
+uuid = { version = "1", features = ["js"] }
+
+[profile.release]
+opt-level = "s"
+lto = true

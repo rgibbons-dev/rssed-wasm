@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rssed</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top bar -->
+    <header id="topbar">
+      <button id="hamburger" aria-label="Menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <h1 id="title">rssed</h1>
+      <nav id="nav-desktop">
+        <a href="#" id="nav-home">Home</a>
+        <a href="https://github.com/rgibbons-dev/rssed" target="_blank" rel="noopener">Source</a>
+        <a href="#" id="nav-about">About</a>
+      </nav>
+    </header>
+
+    <!-- Mobile slide-out menu -->
+    <div id="mobile-menu-overlay" class="hidden"></div>
+    <nav id="mobile-menu" class="hidden">
+      <a href="#" class="mobile-nav-link" id="mobile-nav-home">Home</a>
+      <a href="https://github.com/rgibbons-dev/rssed" target="_blank" rel="noopener" class="mobile-nav-link">Source</a>
+      <a href="#" class="mobile-nav-link" id="mobile-nav-about">About</a>
+    </nav>
+
+    <!-- Terminal -->
+    <main id="terminal-wrapper">
+      <div id="terminal">
+        <div id="output"></div>
+        <div id="input-line">
+          <span id="prompt">:</span>
+          <input type="text" id="input" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+        </div>
+      </div>
+    </main>
+
+    <!-- About overlay -->
+    <div id="about-overlay" class="hidden">
+      <div id="about-panel">
+        <button id="about-close" aria-label="Close">&times;</button>
+        <h2>About rssed</h2>
+        <p>An ed(1)-style RSS/Atom feed reader, compiled to WebAssembly and running entirely in your browser.</p>
+        <p>Supports RSS 0.9/1.0/2.0, Atom 0.3/1.0, and JSON Feed 1.0.</p>
+        <p>Type <code>h</code> for a full list of commands.</p>
+        <p class="about-meta">Built with Rust + wasm-bindgen</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
