@@ -168,7 +168,13 @@ fn load_session_urls() -> Result<Vec<String>, String> {
         .map_err(|_| "storage read failed".to_string())?
         .ok_or_else(|| "no saved session".to_string())?;
     let data: SessionData = serde_json::from_str(&json).map_err(|e| e.to_string())?;
-    Ok(data.urls)
+    // Only allow http(s) URLs to prevent SSRF via localStorage tampering
+    let urls = data
+        .urls
+        .into_iter()
+        .filter(|u| u.starts_with("http://") || u.starts_with("https://"))
+        .collect();
+    Ok(urls)
 }
 
 // --- WASM-exposed REPL ---

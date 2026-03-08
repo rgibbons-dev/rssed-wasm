@@ -46,8 +46,17 @@ function proxyUrl(cmd) {
   const match = cmd.match(/^a\s+(.+)$/);
   if (match) {
     let url = match[1].trim();
+    // Reject non-http(s) schemes to prevent SSRF against internal services
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return cmd; // pass through unchanged; Rust side will fail on fetch
+      }
+    } catch {
+      return cmd; // malformed URL, let it fail naturally
+    }
     // Don't double-proxy
-    if (!url.startsWith(CORS_PROXY)) {
+    if (CORS_PROXY && !url.startsWith(CORS_PROXY)) {
       url = CORS_PROXY + encodeURIComponent(url);
     }
     return `a ${url}`;
@@ -84,7 +93,7 @@ async function execute(raw) {
       appendLine(result);
     }
   } catch (err) {
-    appendLine(`error: ${err}`, "line-error");
+    appendLine(`error: ${err instanceof Error ? err.message : String(err)}`, "line-error");
   }
 
   busy = false;
@@ -195,5 +204,5 @@ async function boot() {
 }
 
 boot().catch((err) => {
-  appendLine(`fatal: failed to load WASM module: ${err}`, "line-error");
+  appendLine(`fatal: failed to load WASM module: ${err instanceof Error ? err.message : String(err)}`, "line-error");
 });
